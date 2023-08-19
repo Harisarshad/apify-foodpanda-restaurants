@@ -25,22 +25,31 @@ from selenium.common.exceptions import TimeoutException
 
 # Parameters
 
-STORAGE_PATH = "storage"
-CAPTURES_PATH = os.path.join(STORAGE_PATH, "captures")
-
 LOOP_MAX = 50
 SCROLL_INCREMENT = 600  # This value might need adjusting depending on the website
+
+PATHS = {
+    'storage': '',
+    'captures': '',
+    'stdout_log': '',
+    'stderr_log': '',
+    'captured_file': '',
+    'error_file': ''
+}
 
 async def main():
     async with Actor:
         
         # Read the Actor input
         actor_input = await Actor.get_input() or {}
+        url_template = actor_input.get('url_template', 'https://www.foodpanda.com.kh/en/restaurants/new?lat={lat}&lng={lng}&expedition=delivery')
         location = actor_input.get('location')
         lat, lng = get_location(location)  
 
         unique_id = str(uuid.uuid4())
         Actor.log.info("Using unique id: "+str(unique_id))
+
+        paths = update_paths(unique_id)
 
         # Start the MITM proxy
         proxy_port = find_open_port()
@@ -49,15 +58,36 @@ async def main():
 
         # Load website
         driver = get_driver(proxy_port)
-        await process_website(driver, lat, lng) 
+        await process_website(driver, lat, lng, url_template) 
                 
         driver.quit()
         stop_mitmproxy(mitm_process)
         await process_capture(unique_id)
-        # clean_files(unique_id)
+        clean_files(unique_id)
 
-async def process_website(driver, lat, lng):    
-    url = 'https://www.foodpanda.com.kh/en/restaurants/new?lat='+str(lat)+'&lng='+str(lng)+'&expedition=delivery'
+def ensure_directory_exists(path: str):
+    directory = os.path.dirname(path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+def update_paths(unique_id: str):
+    STORAGE_PATH = "storage"
+
+    PATHS['storage'] = os.path.join(STORAGE_PATH)
+    PATHS['captures'] = os.path.join(STORAGE_PATH, "captures")
+    PATHS['stdout_log_file'] = os.path.abspath(os.path.join(STORAGE_PATH, "mitmdump", f'mitmdump_stdout_{unique_id}.log'))
+    PATHS['stderr_log_file'] = os.path.abspath(os.path.join(STORAGE_PATH, "mitmdump", f'mitmdump_stderr_{unique_id}.log'))
+    PATHS['captured_file'] = os.path.join(PATHS['captures'], f"captured_requests_{unique_id}.txt")
+    PATHS['error_file'] = os.path.join(PATHS['captures'], f"errors_{unique_id}.txt")
+
+    # Ensure directories exist for each path
+    for _, path in PATHS.items():
+        ensure_directory_exists(path)
+
+    return PATHS
+
+async def process_website(driver, lat, lng, url_template):     
+    url = url_template.format(lat=lat, lng=lng)
     driver.get(url)
     time.sleep(3)
 
@@ -123,9 +153,10 @@ def check_captcha(driver):
     # Check fo catpcha
     captcha = driver.find_elements(By.CSS_SELECTOR, '.px-captcha-container')
     if captcha:
-        Actor.log.info('Captcha detected!')
-        time.sleep(120)
-        #return
+        Actor.log.error('Captcha detected!')
+        # TODO: Handle Captcha
+        #time.sleep(120)
+        return
 
 def get_driver(proxy_port = 8080):
     # Launch a new Selenium Chrome WebDriver
@@ -145,7 +176,7 @@ def get_driver(proxy_port = 8080):
     return driver
 
 async def process_capture(unique_id):
-    captured_file_path = os.path.join(CAPTURES_PATH, f"captured_requests_{unique_id}.txt")
+    captured_file_path = PATHS['captured_file']
     
     # Ensure that the file is read using 'utf-8' encoding
     with open(captured_file_path, "r", encoding='utf-8') as file:
@@ -300,7 +331,7 @@ def find_open_port(start_port=8080):
 
 def start_mitmproxy(unique_id, port = 8080):
     # Ensure data folder exists or create it
-    data_folder = STORAGE_PATH
+    data_folder = PATHS['storage']
     if not os.path.exists(data_folder):
         os.makedirs(data_folder)   
 
@@ -308,16 +339,14 @@ def start_mitmproxy(unique_id, port = 8080):
     dump_script_path = os.path.join("src", "save_requests.py")
 
     # Define paths for stdout and stderr logs
-    stdout_log_path = os.path.abspath(os.path.join(data_folder, "mitmdump", f'mitmdump_stdout_{unique_id}.log'))
-    stderr_log_path = os.path.abspath(os.path.join(data_folder, "mitmdump", f'mitmdump_stderr_{unique_id}.log'))
+    stdout_log_path = PATHS['stdout_log_file']
+    stderr_log_path = PATHS['stderr_log_file']
 
     # Start mitmdump with the specified port
     with open(stdout_log_path, 'w') as stdout_file, open(stderr_log_path, 'w') as stderr_file:
         cmd = f'mitmdump --quiet -p {port} -s {dump_script_path} {unique_id} > {stdout_log_path} 2> {stderr_log_path}'
         process = subprocess.Popen(cmd, shell=True)
-        #process = subprocess.Popen(["mitmdump", "--quiet", "-s", dump_script_path, unique_id], stderr=stderr_file, stdout=stdout_file)
 
-    # Give it a bit of time to start
     time.sleep(3)
 
     # Check the stderr log for errors
@@ -348,14 +377,8 @@ def is_valid_json(s):
     except ValueError:
         return False
     
-def clean_files(unique_id):
-    data_folder = STORAGE_PATH
-    stdout_log_path = os.path.abspath(os.path.join(data_folder, "mitmdump", f'mitmdump_stdout_{unique_id}.log'))
-    stderr_log_path = os.path.abspath(os.path.join(data_folder, "mitmdump", f'mitmdump_stderr_{unique_id}.log'))
-    captured_file_path = os.path.join(CAPTURES_PATH, f"captured_requests_{unique_id}.txt")
-    error_file_path = os.path.join(CAPTURES_PATH, f"errors_{unique_id}.txt")
-
-    delete_files(stdout_log_path, stderr_log_path, captured_file_path, error_file_path)
+def clean_files():
+    delete_files(PATHS['stdout_log_file'], PATHS['stderr_log_file'], PATHS['captured_file'], PATHS['error_file'])
 
 def delete_files(*file_paths):
     """Delete files specified by their paths."""
