@@ -1,0 +1,15 @@
+{
+    "title": "Python Selenium Scraper",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "location": {
+            "title": "Location for the search",
+            "type": "string",
+            "description": "The location of resturants you want to get the data from.",
+            "editor": "textfield",
+            "prefill": "Phnom Penh, Cambodia"
+        }
+    },
+    "required": ["location"]
+}
