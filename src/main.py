@@ -67,7 +67,7 @@ async def main():
         driver.quit()
         stop_mitmproxy(mitm_process)
         await process_capture(unique_id)
-        clean_files(unique_id)
+        clean_files()
 
 def ensure_directory_exists(directory: str):
     if directory and not os.path.exists(directory):
