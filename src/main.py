@@ -228,13 +228,14 @@ async def process_vendors(data):
                 return
 
             for view in organic_views:
-                items = view.get('items', [])            
-                if not isinstance(items, list):
-                    Actor.log.warning("Expected items to be a list but received a %s", type(items))
+                vendors = view.get('items', [])            
+                if not isinstance(vendors, list):
+                    Actor.log.warning("Expected items to be a list but received a %s", type(vendors))
                     continue
-                for vendor in items:
-                    # Actor.log.info("Vendor added %s", str(vendor.get('url_key')))
-                    await dataset.push_data(vendor)
+
+                for vendor in vendors:
+                    await add_vendor_to_dataset(dataset, vendor)
+
     except Exception as e:
         Actor.log.error("Error while processing organic listing: %s", str(e))
 
@@ -254,12 +255,19 @@ async def process_vendors(data):
                     print(vendors)
                     Actor.log.warning("Expected vendor items to be a list but received a %s", type(vendors))                
                     continue
+
                 for vendor in vendors:
-                    vendordata = vendor.get('vendor', {})
-                    # Actor.log.info("Vendor added %s", str(vendordata.get('url_key')))
-                    await dataset.push_data(vendor)               
+                    await add_vendor_to_dataset(dataset, vendor)
+
     except Exception as e:
         Actor.log.error("Error while processing swimlanes: %s", str(e))
+
+async def add_vendor_to_dataset(dataset, vendor):
+    vendordata = vendor.get('vendor', {})
+    if not vendordata:
+        await dataset.push_data(vendor)
+    else:
+        await dataset.push_data(vendordata) 
 
 def extract_vendor_data(tile):
     # Create an empty dictionary to store the vendor's data
