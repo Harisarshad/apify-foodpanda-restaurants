@@ -28,11 +28,13 @@ from selenium.common.exceptions import TimeoutException
 LOOP_MAX = 50
 SCROLL_INCREMENT = 600  # This value might need adjusting depending on the website
 
+STORAGE_PATH = "storage"
 PATHS = {
-    'storage': '',
-    'captures': '',
-    'stdout_log': '',
-    'stderr_log': '',
+    'storage': STORAGE_PATH,
+    'captures': os.path.join(STORAGE_PATH, "captures"),
+    'mitmdump': os.path.join(STORAGE_PATH, "mitmdump"),
+    'stdout_log_file' : '',
+    'stderr_log_file' : '',
     'captured_file': '',
     'error_file': ''
 }
@@ -40,16 +42,19 @@ PATHS = {
 async def main():
     async with Actor:
         
+        unique_id = str(uuid.uuid4())
+        paths = update_paths(unique_id)
+
         # Read the Actor input
         actor_input = await Actor.get_input() or {}
         url_template = actor_input.get('url_template', 'https://www.foodpanda.com.kh/en/restaurants/new?lat={lat}&lng={lng}&expedition=delivery')
         location = actor_input.get('location')
         lat, lng = get_location(location)  
 
-        unique_id = str(uuid.uuid4())
+        
         Actor.log.info("Using unique id: "+str(unique_id))
 
-        paths = update_paths(unique_id)
+        
 
         # Start the MITM proxy
         proxy_port = find_open_port()
@@ -65,27 +70,22 @@ async def main():
         await process_capture(unique_id)
         clean_files(unique_id)
 
-def ensure_directory_exists(path: str):
-    directory = os.path.dirname(path)
-    if not os.path.exists(directory):
+def ensure_directory_exists(directory: str):
+    if directory and not os.path.exists(directory):
         os.makedirs(directory)
 
 def update_paths(unique_id: str):
-    STORAGE_PATH = "storage"
 
-    PATHS['storage'] = os.path.join(STORAGE_PATH)
-    PATHS['captures'] = os.path.join(STORAGE_PATH, "captures")
-    PATHS['stdout_log_file'] = os.path.abspath(os.path.join(STORAGE_PATH, "mitmdump", f'mitmdump_stdout_{unique_id}.log'))
-    PATHS['stderr_log_file'] = os.path.abspath(os.path.join(STORAGE_PATH, "mitmdump", f'mitmdump_stderr_{unique_id}.log'))
-    PATHS['captured_file'] = os.path.join(PATHS['captures'], f"captured_requests_{unique_id}.txt")
-    PATHS['error_file'] = os.path.join(PATHS['captures'], f"errors_{unique_id}.txt")
+    PATHS['stdout_log_file']    = os.path.join(PATHS['mitmdump'], f'mitmdump_stdout_{unique_id}.log')
+    PATHS['stderr_log_file']        = os.path.join(PATHS['mitmdump'], f'mitmdump_stderr_{unique_id}.log')
+    PATHS['captured_file']      = os.path.join(PATHS['captures'], f"captured_requests_{unique_id}.txt")
+    PATHS['error_file']         = os.path.join(PATHS['captures'], f"errors_{unique_id}.txt")
 
     # List of directory paths to ensure exist
     directories_to_ensure = [
         PATHS['storage'],
         PATHS['captures'],
-        os.path.dirname(PATHS['stdout_log_file']),
-        os.path.dirname(PATHS['stderr_log_file'])
+        PATHS['mitmdump'],
     ]
 
     # Ensure directories exist
