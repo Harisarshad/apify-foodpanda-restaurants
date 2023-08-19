@@ -43,18 +43,17 @@ async def main():
     async with Actor:
         
         unique_id = str(uuid.uuid4())
+        Actor.log.info("Using unique id: "+str(unique_id))
+
         paths = update_paths(unique_id)
 
         # Read the Actor input
         actor_input = await Actor.get_input() or {}
         url_template = actor_input.get('url_template', 'https://www.foodpanda.com.kh/en/restaurants/new?lat={lat}&lng={lng}&expedition=delivery')
         location = actor_input.get('location')
-        lat, lng = get_location(location)  
+        Actor.log.info("Using location: "+str(location))
 
-        
-        Actor.log.info("Using unique id: "+str(unique_id))
-
-        
+        lat, lng = get_location(location)      
 
         # Start the MITM proxy
         proxy_port = find_open_port()
@@ -96,6 +95,8 @@ def update_paths(unique_id: str):
 
 async def process_website(driver, lat, lng, url_template):     
     url = url_template.format(lat=lat, lng=lng)
+    Actor.log.info("Using url: "+str(url))
+
     driver.get(url)
     time.sleep(3)
 
