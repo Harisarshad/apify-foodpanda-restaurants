@@ -217,7 +217,7 @@ async def process_vendors(data):
         Actor.log.error("Expected data to be a dictionary but received a %s", type(data))
         return
 
-    dataset = await Actor.open_dataset(name='captured_vendors')
+    dataset = await Actor.open_dataset(name='captured-vendors')
 
     try:
         # Get vendors from organic_listing
