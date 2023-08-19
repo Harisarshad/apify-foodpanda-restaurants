@@ -80,9 +80,17 @@ def update_paths(unique_id: str):
     PATHS['captured_file'] = os.path.join(PATHS['captures'], f"captured_requests_{unique_id}.txt")
     PATHS['error_file'] = os.path.join(PATHS['captures'], f"errors_{unique_id}.txt")
 
-    # Ensure directories exist for each path
-    for _, path in PATHS.items():
-        ensure_directory_exists(path)
+    # List of directory paths to ensure exist
+    directories_to_ensure = [
+        PATHS['storage'],
+        PATHS['captures'],
+        os.path.dirname(PATHS['stdout_log_file']),
+        os.path.dirname(PATHS['stderr_log_file'])
+    ]
+
+    # Ensure directories exist
+    for directory in directories_to_ensure:
+        ensure_directory_exists(directory)
 
     return PATHS
 
