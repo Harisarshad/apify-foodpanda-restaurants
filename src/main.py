@@ -241,7 +241,7 @@ async def process_vendors(data):
 
     try:
         # Get vendors from swimlanes
-        swimlanes = data.get('data', {}).get('rlp', {}).get('swimlanes', {}).get('data', {}).get('items', {})
+        swimlanes = data.get('data', {}).get('rlp', {}).get('swimlanes', {}).get('data', {}).get('items', [])
 
         if swimlanes:
             if not isinstance(swimlanes, list):
@@ -258,16 +258,19 @@ async def process_vendors(data):
 
                 for vendor in vendors:
                     await add_vendor_to_dataset(dataset, vendor)
-
     except Exception as e:
         Actor.log.error("Error while processing swimlanes: %s", str(e))
 
-async def add_vendor_to_dataset(dataset, vendor):
-    vendordata = vendor.get('vendor', {})
-    if not vendordata:
-        await dataset.push_data(vendor)
+
+async def add_vendor_to_dataset(dataset, vendor_data):
+    # Check if vendor data is directly inside vendor key
+    if "vendor" in vendor_data:
+        vendor_data = vendor_data.get('vendor', {})        
+    # Now add the vendor data to the dataset
+    if vendor_data:
+        await dataset.push_data(vendor_data)
     else:
-        await dataset.push_data(vendordata) 
+        Actor.log.warning("Received empty vendor data.")
 
 def extract_vendor_data(tile):
     # Create an empty dictionary to store the vendor's data
