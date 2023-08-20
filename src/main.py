@@ -76,7 +76,7 @@ def ensure_directory_exists(directory: str):
 def update_paths(unique_id: str):
 
     PATHS['stdout_log_file']    = os.path.join(PATHS['mitmdump'], f'mitmdump_stdout_{unique_id}.log')
-    PATHS['stderr_log_file']        = os.path.join(PATHS['mitmdump'], f'mitmdump_stderr_{unique_id}.log')
+    PATHS['stderr_log_file']    = os.path.join(PATHS['mitmdump'], f'mitmdump_stderr_{unique_id}.log')
     PATHS['captured_file']      = os.path.join(PATHS['captures'], f"captured_requests_{unique_id}.txt")
     PATHS['error_file']         = os.path.join(PATHS['captures'], f"errors_{unique_id}.txt")
 
@@ -162,10 +162,10 @@ def check_captcha(driver):
     # Check fo catpcha
     captcha = driver.find_elements(By.CSS_SELECTOR, '.px-captcha-container')
     if captcha:
-        Actor.log.error('Captcha detected!')
+        msg = "Captcha detected! Exiting..."
+        Actor.log.error(msg)
         # TODO: Handle Captcha
-        #time.sleep(120)
-        return
+        raise Exception(msg)        
 
 def get_driver(proxy_port = 8080):
     # Launch a new Selenium Chrome WebDriver
@@ -265,7 +265,8 @@ async def process_vendors(data):
 async def add_vendor_to_dataset(dataset, vendor_data):
     # Check if vendor data is directly inside vendor key
     if "vendor" in vendor_data:
-        vendor_data = vendor_data.get('vendor', {})        
+        vendor_data = vendor_data.get('vendor', {})
+
     # Now add the vendor data to the dataset
     if vendor_data:
         await dataset.push_data(vendor_data)
@@ -398,6 +399,7 @@ def is_valid_json(s):
         return False
     
 def clean_files():
+    Actor.log.info("Cleaning up files...")
     delete_files(PATHS['stdout_log_file'], PATHS['stderr_log_file'], PATHS['captured_file'], PATHS['error_file'])
 
 def delete_files(*file_paths):
