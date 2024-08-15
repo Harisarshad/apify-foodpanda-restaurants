@@ -8,7 +8,7 @@
             "type": "string",
             "description": "The location of resturants you want to get the data from.",
             "editor": "textfield",
-            "prefill": "Phnom Penh, Cambodia"
+            "prefill": "DHA Phase 6 Lahore"
         }
     },
     "required": ["location"]
