@@ -51,7 +51,7 @@ async def main():
 
         # Read the Actor input
         actor_input = await Actor.get_input() or {}
-        url_template = actor_input.get('url_template', 'https://www.foodpanda.com.kh/en/restaurants/new?lat={lat}&lng={lng}&expedition=delivery')
+        url_template = actor_input.get('url_template', 'https://www.foodpanda.pk/restaurants/new?lat={lat}&lng={lng}&expedition=delivery')
         location = actor_input.get('location')
         Actor.log.info("Using location: "+str(location))
 
